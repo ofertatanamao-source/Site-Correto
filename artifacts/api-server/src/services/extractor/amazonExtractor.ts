@@ -26,9 +26,9 @@ export class AmazonExtractor implements ProductExtractor {
 
   canHandle(url: string): boolean {
     return (
-      /amazon\.com\.br/i.test(url) ||
-      /amzn\.to/i.test(url) ||
-      /amzn\.com/i.test(url)
+      /amazon\.com/i.test(url) ||   // matches amazon.com, amazon.com.br, and any other Amazon TLD
+      /amzn\.to/i.test(url) ||       // amzn.to short links
+      /amzn\.com/i.test(url)         // amzn.com short links
     );
   }
 
