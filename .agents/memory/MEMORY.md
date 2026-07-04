@@ -1,0 +1,1 @@
+- [Ta na Mao architecture](ta-na-mao-arch.md) — modular extractor pattern; ML extractor calls real public API; text gen is pure server-side templates

@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Tá na Mão - API for Brazilian affiliate marketing tool
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: products
+    description: Product extraction and management
+  - name: promotions
+    description: Promotional content generation
+  - name: templates
+    description: Custom template management
 paths:
   /healthz:
     get:
@@ -24,6 +30,194 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /products/extract:
+    post:
+      operationId: extractProduct
+      tags: [products]
+      summary: Extract product info from URL
+      description: Detects platform and extracts product data from Amazon BR, Shopee BR or Mercado Livre BR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductExtractInput"
+      responses:
+        "200":
+          description: Product extracted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+        "400":
+          description: Invalid or unsupported URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: Could not extract product data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /products/history:
+    get:
+      operationId: listHistory
+      tags: [products]
+      summary: List extraction history
+      description: Returns the list of previously extracted products
+      responses:
+        "200":
+          description: History list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HistoryItem"
+
+  /products/history/{id}:
+    delete:
+      operationId: deleteHistoryItem
+      tags: [products]
+      summary: Delete a history item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /products/favorites:
+    get:
+      operationId: listFavorites
+      tags: [products]
+      summary: List favorite products
+      responses:
+        "200":
+          description: Favorites list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HistoryItem"
+
+  /products/history/{id}/favorite:
+    patch:
+      operationId: toggleFavorite
+      tags: [products]
+      summary: Toggle favorite status of a history item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoryItem"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /promotions/generate:
+    post:
+      operationId: generatePromotion
+      tags: [promotions]
+      summary: Generate all promotional content for a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromotionInput"
+      responses:
+        "200":
+          description: Generated promotional content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Promotion"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /templates:
+    get:
+      operationId: listTemplates
+      tags: [templates]
+      summary: List available story templates
+      responses:
+        "200":
+          description: Template list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Template"
+    post:
+      operationId: createTemplate
+      tags: [templates]
+      summary: Upload a custom story template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateInput"
+      responses:
+        "201":
+          description: Created template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+
+  /templates/{id}:
+    delete:
+      operationId: deleteTemplate
+      tags: [templates]
+      summary: Delete a template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +228,178 @@ components:
       required:
         - status
 
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    ProductExtractInput:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          description: Product URL from Amazon BR, Shopee BR or Mercado Livre BR
+        affiliateLink:
+          type: ["string", "null"]
+          description: Optional affiliate link override
+
+    Product:
+      type: object
+      required:
+        - platform
+        - title
+        - shortTitle
+        - currentPrice
+        - imageUrl
+        - productUrl
+      properties:
+        id:
+          type: ["integer", "null"]
+        platform:
+          type: string
+          enum: [amazon, shopee, mercadolivre]
+        title:
+          type: string
+          description: Full product title
+        shortTitle:
+          type: string
+          description: Shortened title (max 40 chars), preserving brand, product and size
+        currentPrice:
+          type: string
+          description: Current price formatted as BRL
+        originalPrice:
+          type: ["string", "null"]
+          description: Original price before discount, formatted as BRL
+        discountPercentage:
+          type: ["integer", "null"]
+          description: Discount percentage if available
+        imageUrl:
+          type: string
+          description: Main product image URL
+        productUrl:
+          type: string
+          description: Original product URL
+        affiliateLink:
+          type: ["string", "null"]
+          description: Affiliate link for the product
+
+    HistoryItem:
+      type: object
+      required:
+        - id
+        - platform
+        - title
+        - shortTitle
+        - currentPrice
+        - imageUrl
+        - productUrl
+        - isFavorite
+        - createdAt
+      properties:
+        id:
+          type: integer
+        platform:
+          type: string
+          enum: [amazon, shopee, mercadolivre]
+        title:
+          type: string
+        shortTitle:
+          type: string
+        currentPrice:
+          type: string
+        originalPrice:
+          type: ["string", "null"]
+        discountPercentage:
+          type: ["integer", "null"]
+        imageUrl:
+          type: string
+        productUrl:
+          type: string
+        affiliateLink:
+          type: ["string", "null"]
+        isFavorite:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    PromotionInput:
+      type: object
+      required:
+        - historyItemId
+      properties:
+        historyItemId:
+          type: integer
+        templateId:
+          type: ["integer", "null"]
+          description: Template to use for Instagram Story, null uses default
+
+    Promotion:
+      type: object
+      required:
+        - id
+        - historyItemId
+        - whatsappText
+        - instagramCaption
+        - telegramMessage
+        - promotionalScript
+        - createdAt
+      properties:
+        id:
+          type: integer
+        historyItemId:
+          type: integer
+        whatsappText:
+          type: string
+        instagramCaption:
+          type: string
+        telegramMessage:
+          type: string
+        promotionalScript:
+          type: string
+          description: 15-second promotional script
+        storyImageUrl:
+          type: ["string", "null"]
+          description: URL of generated 1080x1920 Instagram Story image
+        feedImageUrl:
+          type: ["string", "null"]
+          description: URL of generated 1080x1350 Instagram Feed image
+        createdAt:
+          type: string
+          format: date-time
+
+    Template:
+      type: object
+      required:
+        - id
+        - name
+        - isDefault
+        - createdAt
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        imageUrl:
+          type: ["string", "null"]
+          description: Preview URL of the template
+        isDefault:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    TemplateInput:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        imageUrl:
+          type: ["string", "null"]

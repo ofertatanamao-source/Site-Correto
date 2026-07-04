@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Tá na Mão"
+version = "1.0.0"
+id = "artifacts/ta-na-mao"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21456
+
+[services.development]
+run = "pnpm --filter @workspace/ta-na-mao run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ta-na-mao", "run", "build" ]
+publicDir = "artifacts/ta-na-mao/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21456"
+BASE_PATH = "/"
