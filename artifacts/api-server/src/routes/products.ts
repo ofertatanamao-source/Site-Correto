@@ -15,8 +15,12 @@ router.post("/products/extract", async (req, res) => {
 
   const { url, affiliateLink } = parsed.data;
 
+  // affiliateLink: if the caller didn't pass one explicitly, the pasted URL IS
+  // the affiliate link (it may contain tag=, linkId=, ascsubtag=, ref= etc.).
+  // extractProduct() normalizes/resolves redirects before platform detection,
+  // then preserves the original URL as the affiliate link automatically.
   try {
-    const product = await extractProduct(url, affiliateLink);
+    const product = await extractProduct(url, affiliateLink ?? undefined);
 
     const [inserted] = await db
       .insert(historyTable)

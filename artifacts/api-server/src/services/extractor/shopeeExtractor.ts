@@ -13,7 +13,11 @@ export class ShopeeExtractor implements ProductExtractor {
   readonly platform = "shopee" as const;
 
   canHandle(url: string): boolean {
-    return /shopee\.com\.br/i.test(url);
+    return (
+      /shopee\.com\.br/i.test(url) ||
+      /s\.shopee\.com\.br/i.test(url) ||
+      /shopee\.link/i.test(url)
+    );
   }
 
   async extract(url: string, affiliateLink?: string | null): Promise<ExtractedProduct> {
