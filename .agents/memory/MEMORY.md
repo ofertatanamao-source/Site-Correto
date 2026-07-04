@@ -1,1 +1,2 @@
 - [Ta na Mao architecture](ta-na-mao-arch.md) — modular extractor pattern; ML extractor calls real public API; text gen is pure server-side templates
+- [Platform extraction blocking](extraction-blocking.md) — Amazon/Shopee/ML block GCP cloud IPs; credential env vars are the fix; scraping works from residential IPs.

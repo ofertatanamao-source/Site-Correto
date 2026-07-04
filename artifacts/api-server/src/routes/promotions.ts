@@ -3,6 +3,7 @@ import { db, historyTable, promotionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { GeneratePromotionBody } from "@workspace/api-zod";
 import { generatePromotionTexts } from "../services/promotionGenerator.js";
+import { generateProductImages } from "../services/imageGenerator.js";
 
 const router = Router();
 
@@ -28,29 +29,45 @@ router.post("/promotions/generate", async (req, res) => {
   const product = historyItems[0];
   const texts = generatePromotionTexts(product);
 
-  const [inserted] = await db
-    .insert(promotionsTable)
-    .values({
-      historyItemId,
-      whatsappText: texts.whatsappText,
-      instagramCaption: texts.instagramCaption,
-      telegramMessage: texts.telegramMessage,
-      promotionalScript: texts.promotionalScript,
-      storyImageUrl: null,
-      feedImageUrl: null,
+  // Generate images in parallel with the DB insert
+  const [insertResult, images] = await Promise.all([
+    db
+      .insert(promotionsTable)
+      .values({
+        historyItemId,
+        whatsappText: texts.whatsappText,
+        instagramCaption: texts.instagramCaption,
+        telegramMessage: texts.telegramMessage,
+        promotionalScript: texts.promotionalScript,
+        storyImageUrl: null,
+        feedImageUrl: null,
+      })
+      .returning(),
+    generateProductImages(product),
+  ]);
+
+  const inserted = insertResult[0];
+
+  // Update the record with the generated image URLs
+  const [updated] = await db
+    .update(promotionsTable)
+    .set({
+      storyImageUrl: images.storyImageUrl,
+      feedImageUrl: images.feedImageUrl,
     })
+    .where(eq(promotionsTable.id, inserted.id))
     .returning();
 
   return res.json({
-    id: inserted.id,
-    historyItemId: inserted.historyItemId,
-    whatsappText: inserted.whatsappText,
-    instagramCaption: inserted.instagramCaption,
-    telegramMessage: inserted.telegramMessage,
-    promotionalScript: inserted.promotionalScript,
-    storyImageUrl: inserted.storyImageUrl ?? null,
-    feedImageUrl: inserted.feedImageUrl ?? null,
-    createdAt: inserted.createdAt.toISOString(),
+    id: updated.id,
+    historyItemId: updated.historyItemId,
+    whatsappText: updated.whatsappText,
+    instagramCaption: updated.instagramCaption,
+    telegramMessage: updated.telegramMessage,
+    promotionalScript: updated.promotionalScript,
+    storyImageUrl: updated.storyImageUrl ?? null,
+    feedImageUrl: updated.feedImageUrl ?? null,
+    createdAt: updated.createdAt.toISOString(),
   });
 });
 
